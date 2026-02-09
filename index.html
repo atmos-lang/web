@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lua 5.4 - wasmoon</title>
+</head>
+<body>
+    <textarea id="code" rows="12" cols="80">
+print("Hello from Lua 5.4!")
+
+-- test &lt;close&gt;
+local function resource(name)
+    return setmetatable({name=name}, {
+        __close = function(self)
+            print("closing: " .. self.name)
+        end
+    })
+end
+
+do
+    local r &lt;close&gt; = resource("r1")
+    print("inside block")
+end
+
+-- test coroutine.close()
+local co = coroutine.create(function()
+    local r &lt;close&gt; = resource("coroutine-r")
+    coroutine.yield()
+end)
+coroutine.resume(co)
+coroutine.close(co)
+</textarea>
+    <br>
+    <button id="run">Run</button>
+    <pre id="output"></pre>
+
+    <script type="module">
+    import { LuaFactory } from
+        'https://cdn.jsdelivr.net/npm/wasmoon@1.16.0/+esm';
+
+    const btn = document.getElementById('run');
+    const code = document.getElementById('code');
+    const output = document.getElementById('output');
+
+    btn.addEventListener('click', async () => {
+        output.textContent = '';
+        const factory = new LuaFactory();
+        const lua = await factory.createEngine();
+        lua.global.set('print', (...args) => {
+            output.textContent +=
+                args.join('\t') + '\n';
+        });
+        try {
+            await lua.doString(code.value);
+        } catch (e) {
+            output.textContent +=
+                'ERROR: ' + e.message + '\n';
+        }
+        lua.global.close();
+    });
+    </script>
+</body>
+</html>
