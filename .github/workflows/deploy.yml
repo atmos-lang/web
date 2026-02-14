@@ -1,0 +1,118 @@
+name: Web
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+
+env:
+  APP_DIR: web  # subpasta deste projeto no DreamHost
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # -------------------------------------------------------
+      # Adapte esta seção conforme seu projeto.
+      # Exemplos para diferentes stacks:
+      # -------------------------------------------------------
+
+      # --- Node.js ---
+      # - uses: actions/setup-node@v4
+      #   with:
+      #     node-version: '20'
+      #     cache: 'npm'
+      # - run: npm ci
+      # - run: npm test
+      # - run: npm run build  # se houver build step
+
+      # --- PHP ---
+      # - uses: shivammathur/setup-php@v2
+      #   with:
+      #     php-version: '8.3'
+      # - run: composer install
+      # - run: vendor/bin/phpunit
+
+      # --- Python ---
+      # - uses: actions/setup-python@v5
+      #   with:
+      #     python-version: '3.12'
+      # - run: pip install -r requirements.txt
+      # - run: pytest
+
+      # --- Site estático (Hugo, Jekyll, etc.) ---
+      # - run: hugo --minify
+      # - run: bundle exec jekyll build
+
+      - name: Placeholder test
+        run: echo "Configure seus testes aqui"
+
+  deploy-dev:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      # Se o projeto tem build step, descomente:
+      # - uses: actions/setup-node@v4
+      #   with:
+      #     node-version: '20'
+      # - run: npm ci && npm run build
+
+      - name: Deploy to dev
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.DH_SSH_KEY }}
+          REMOTE_HOST: ${{ vars.DH_HOST }}
+          REMOTE_USER: ${{ vars.DH_USER }}
+          REMOTE_DIR: ${{ vars.DH_DIR_DEV }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$REMOTE_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+            --exclude 'node_modules' \
+            --exclude '.env' \
+            web/ "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/${APP_DIR}/"
+
+          rm -f ~/.ssh/deploy_key
+
+  deploy-pro:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v4
+
+      # Se o projeto tem build step, descomente:
+      # - uses: actions/setup-node@v4
+      #   with:
+      #     node-version: '20'
+      # - run: npm ci && npm run build
+
+      - name: Deploy to pro
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.DH_SSH_KEY }}
+          REMOTE_HOST: ${{ vars.DH_HOST }}
+          REMOTE_USER: ${{ vars.DH_USER }}
+          REMOTE_DIR: ${{ vars.DH_DIR_PRO }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$REMOTE_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+            --exclude 'node_modules' \
+            --exclude '.env' \
+            web/ "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/${APP_DIR}/"
+
+          rm -f ~/.ssh/deploy_key
