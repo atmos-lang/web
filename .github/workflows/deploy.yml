@@ -48,10 +48,10 @@ jobs:
       # - run: hugo --minify
       # - run: bundle exec jekyll build
 
-      - name: Check index-self.html is up to date
+      - name: Check index.html is up to date
         run: |
-          python3 build-self.py
-          git diff --exit-code web/try/atmos/index-self.html
+          bash build.sh
+          git diff --exit-code web/try/atmos/index.html
 
   deploy-dev:
     needs: test
