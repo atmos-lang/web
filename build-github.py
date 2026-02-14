@@ -9,81 +9,68 @@ Fetches from three upstream repos:
   lua-atmos/atmos      - atmos runtime
   atmos-lang/atmos     - atmos compiler
 
-Usage:
-  python3 build-github.py <streams-tag> <atmos-tag> <lang-tag>
-  e.g. python3 build-github.py v1.0 v2.0 v3.0
-       python3 build-github.py master master master
+Usage: python3 build-github.py
 """
 import os
-import sys
 import urllib.request
 
-if len(sys.argv) != 4:
-    print(
-        f'Usage: {sys.argv[0]}'
-        f' <streams-tag> <atmos-tag> <lang-tag>'
-    )
-    print(
-        f'  e.g. {sys.argv[0]}'
-        f' v1.0 v2.0 v3.0'
-    )
-    sys.exit(1)
-
-STREAMS_TAG = sys.argv[1]
-ATMOS_TAG   = sys.argv[2]
-LANG_TAG    = sys.argv[3]
+TAGS = {
+    'lua-atmos/f-streams': 'v0.2',
+    'lua-atmos/atmos':     'v0.5',
+    'atmos-lang/atmos':    'v0.5',
+}
 
 RAW = 'https://raw.githubusercontent.com'
 
-# (module-name, repo, tag, path)
+# (module-name, repo, path)
 MODULES = [
     ('streams',
-        'lua-atmos/f-streams', STREAMS_TAG,
+        'lua-atmos/f-streams',
         'streams/init.lua'),
     ('atmos',
-        'lua-atmos/atmos', ATMOS_TAG,
+        'lua-atmos/atmos',
         'atmos/init.lua'),
     ('atmos.util',
-        'lua-atmos/atmos', ATMOS_TAG,
+        'lua-atmos/atmos',
         'atmos/util.lua'),
     ('atmos.run',
-        'lua-atmos/atmos', ATMOS_TAG,
+        'lua-atmos/atmos',
         'atmos/run.lua'),
     ('atmos.streams',
-        'lua-atmos/atmos', ATMOS_TAG,
+        'lua-atmos/atmos',
         'atmos/streams.lua'),
     ('atmos.x',
-        'lua-atmos/atmos', ATMOS_TAG,
+        'lua-atmos/atmos',
         'atmos/x.lua'),
     ('atmos.env.clock',
-        'lua-atmos/atmos', ATMOS_TAG,
+        'lua-atmos/atmos',
         'atmos/env/clock/init.lua'),
     ('atmos.lang.global',
-        'atmos-lang/atmos', LANG_TAG,
+        'atmos-lang/atmos',
         'src/global.lua'),
     ('atmos.lang.aux',
-        'atmos-lang/atmos', LANG_TAG,
+        'atmos-lang/atmos',
         'src/aux.lua'),
     ('atmos.lang.lexer',
-        'atmos-lang/atmos', LANG_TAG,
+        'atmos-lang/atmos',
         'src/lexer.lua'),
     ('atmos.lang.parser',
-        'atmos-lang/atmos', LANG_TAG,
+        'atmos-lang/atmos',
         'src/parser.lua'),
     ('atmos.lang.prim',
-        'atmos-lang/atmos', LANG_TAG,
+        'atmos-lang/atmos',
         'src/prim.lua'),
     ('atmos.lang.coder',
-        'atmos-lang/atmos', LANG_TAG,
+        'atmos-lang/atmos',
         'src/coder.lua'),
     ('atmos.lang.tosource',
-        'atmos-lang/atmos', LANG_TAG,
+        'atmos-lang/atmos',
         'src/tosource.lua'),
     ('atmos.lang.exec',
-        'atmos-lang/atmos', LANG_TAG,
+        'atmos-lang/atmos',
         'src/exec.lua'),
     ('atmos.lang.run',
-        'atmos-lang/atmos', LANG_TAG,
+        'atmos-lang/atmos',
         'src/run.lua'),
 ]
 
@@ -93,7 +80,8 @@ os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 # fetch all modules from GitHub
 tags = ''
-for name, repo, tag, path in MODULES:
+for name, repo, path in MODULES:
+    tag = TAGS[repo]
     url = f'{RAW}/{repo}/{tag}/{path}'
     print(f'  {name}: {url}')
     content = urllib.request.urlopen(url).read()
