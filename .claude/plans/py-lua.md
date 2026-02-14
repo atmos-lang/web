@@ -1,8 +1,6 @@
-# Plan: Convert build-self.py to Lua & Fetch Lua from GitHub
+# Plan: Convert build-self.py to Lua
 
-## Answers
-
-### 1. Can build-self.py be converted to Lua?
+## Analysis
 
 **Yes, but not practical here.** The script does simple file I/O (read 16 files,
 concatenate into an HTML template) — trivially expressible in Lua. However, no
@@ -14,81 +12,25 @@ local dev, this environment). Converting to Lua gains nothing and adds friction.
 available in web projects and already implied by the JS/Wasmoon toolchain. But
 even that is a lateral move; Python works fine.
 
-### 2. Can the Lua files be fetched from GitHub raw content?
+## Implementation Steps (if pursued)
 
-**Yes, and `index-fetch.html` already does 90% of this.** It fetches modules at
-runtime via `fetch()` from relative URLs. The only change needed is switching the
-base URL from relative paths to GitHub raw content URLs:
+### Step 1: Install Lua interpreter
 
-```
-https://raw.githubusercontent.com/atmos-lang/web/master/web/try/atmos/lua/
-```
+Add `lua5.4` (or `luajit`) as a system/CI dependency.
 
-This would allow:
-- Removing all files under `web/try/atmos/lua/` from this repo
-- Removing `build-self.py` entirely (no need to inline if we always fetch)
-- `index-self.html` (the generated file) could also be removed
-- Only `index-fetch.html` remains, pointing at GitHub raw URLs
+### Step 2: Rewrite build-self.py in Lua
 
-**Caveat:** GitHub raw content has no CORS headers for cross-origin requests from
-arbitrary domains. This works if the HTML is served from `*.github.io` or opened
-locally as `file://`, but **will fail on a custom domain** (like DreamHost
-deployment) due to CORS. Workarounds:
-- Use jsDelivr CDN which proxies GitHub with CORS:
-  `https://cdn.jsdelivr.net/gh/atmos-lang/web@master/web/try/atmos/lua/`
-- Or keep `index-self.html` (inlined, no fetching, no CORS issues) for production
-  and use `index-fetch.html` only for development
+Port the file I/O logic:
+- `io.open()` to read each of the 16 Lua module files
+- String concatenation to build the HTML template
+- `io.open()` to write `index-self.html`
 
----
+### Step 3: Update CI/CD
 
-## Implementation Steps
+Change `.github/workflows/deploy.yml` to call `lua build-self.lua` instead of
+`python build-self.py`.
 
-### Step 1: Switch `index-fetch.html` to use GitHub URLs via jsDelivr
+## Recommendation
 
-Update the `LUA_MODULES` paths in `index-fetch.html` to use a `BASE_URL`:
-
-```javascript
-const BASE_URL =
-    'https://cdn.jsdelivr.net/gh/atmos-lang/web@master/'
-    + 'web/try/atmos/lua/';
-
-const LUA_MODULES = {
-    'streams':         'streams/init.lua',
-    'atmos':           'atmos/init.lua',
-    // ...same relative paths, but without 'lua/' prefix
-};
-
-// In fetchModules(), prepend BASE_URL:
-const resp = await fetch(BASE_URL + path);
-```
-
-### Step 2: Remove local Lua files
-
-Delete the entire `web/try/atmos/lua/` directory — modules are now served from
-GitHub/jsDelivr.
-
-### Step 3: Remove build-self.py and index-self.html
-
-- Delete `build-self.py` (no longer needed)
-- Delete `web/try/atmos/index-self.html` (no longer generated)
-
-### Step 4: Rename index-fetch.html → index.html
-
-Since it's now the only variant, give it the canonical name.
-
----
-
-## Risk: CORS & CDN caching
-
-- **jsDelivr** caches aggressively. After pushing new Lua code, there may be a
-  delay before the CDN picks it up. Use versioned refs (`@v1.0`) or commit SHAs
-  instead of `@master` for production.
-- If jsDelivr is unacceptable, keep `build-self.py` for production builds and
-  use `index-fetch.html` (with relative paths) only during development when
-  served locally.
-
-## Alternative: Keep both modes
-
-Keep `index-self.html` for production (zero-fetch, works everywhere) and
-`index-fetch.html` with GitHub URLs for a live-updating demo. This avoids the
-CORS/caching issues entirely but means keeping the Lua files and build script.
+**Don't do this.** Python is the right tool. The conversion adds a dependency
+for zero benefit.
