@@ -1,57 +1,90 @@
 #!/usr/bin/env python3
 """
 Generates web/try/atmos/index-self.html with all Lua
-modules fetched from a GitHub tag and inlined as
+modules fetched from GitHub tags and inlined as
 <script type="text/lua"> tags.
 
-Usage: python3 build-github.py <tag>
-  e.g. python3 build-github.py v1.0
-       python3 build-github.py master
+Fetches from three upstream repos:
+  lua-atmos/f-streams  - streams library
+  lua-atmos/atmos      - atmos runtime
+  atmos-lang/atmos     - atmos compiler
+
+Usage:
+  python3 build-github.py <streams-tag> <atmos-tag> <lang-tag>
+  e.g. python3 build-github.py v1.0 v2.0 v3.0
+       python3 build-github.py master master master
 """
 import os
 import sys
 import urllib.request
 
-if len(sys.argv) != 2:
-    print(f'Usage: {sys.argv[0]} <tag>')
-    print(f'  e.g. {sys.argv[0]} v1.0')
+if len(sys.argv) != 4:
+    print(
+        f'Usage: {sys.argv[0]}'
+        f' <streams-tag> <atmos-tag> <lang-tag>'
+    )
+    print(
+        f'  e.g. {sys.argv[0]}'
+        f' v1.0 v2.0 v3.0'
+    )
     sys.exit(1)
 
-TAG = sys.argv[1]
+STREAMS_TAG = sys.argv[1]
+ATMOS_TAG   = sys.argv[2]
+LANG_TAG    = sys.argv[3]
 
-REPO = 'atmos-lang/web'
-BASE = (
-    f'https://raw.githubusercontent.com/{REPO}'
-    f'/{TAG}/web/try/atmos/'
-)
+RAW = 'https://raw.githubusercontent.com'
 
+# (module-name, repo, tag, path)
 MODULES = [
-    ('streams',             'lua/streams/init.lua'),
-    ('atmos',               'lua/atmos/init.lua'),
-    ('atmos.util',          'lua/atmos/util.lua'),
-    ('atmos.run',           'lua/atmos/run.lua'),
-    ('atmos.streams',       'lua/atmos/streams.lua'),
-    ('atmos.x',             'lua/atmos/x.lua'),
+    ('streams',
+        'lua-atmos/f-streams', STREAMS_TAG,
+        'streams/init.lua'),
+    ('atmos',
+        'lua-atmos/atmos', ATMOS_TAG,
+        'atmos/init.lua'),
+    ('atmos.util',
+        'lua-atmos/atmos', ATMOS_TAG,
+        'atmos/util.lua'),
+    ('atmos.run',
+        'lua-atmos/atmos', ATMOS_TAG,
+        'atmos/run.lua'),
+    ('atmos.streams',
+        'lua-atmos/atmos', ATMOS_TAG,
+        'atmos/streams.lua'),
+    ('atmos.x',
+        'lua-atmos/atmos', ATMOS_TAG,
+        'atmos/x.lua'),
     ('atmos.env.clock',
-        'lua/atmos/env/clock/init.lua'),
+        'lua-atmos/atmos', ATMOS_TAG,
+        'atmos/env/clock/init.lua'),
     ('atmos.lang.global',
-        'lua/atmos/lang/global.lua'),
+        'atmos-lang/atmos', LANG_TAG,
+        'src/global.lua'),
     ('atmos.lang.aux',
-        'lua/atmos/lang/aux.lua'),
+        'atmos-lang/atmos', LANG_TAG,
+        'src/aux.lua'),
     ('atmos.lang.lexer',
-        'lua/atmos/lang/lexer.lua'),
+        'atmos-lang/atmos', LANG_TAG,
+        'src/lexer.lua'),
     ('atmos.lang.parser',
-        'lua/atmos/lang/parser.lua'),
+        'atmos-lang/atmos', LANG_TAG,
+        'src/parser.lua'),
     ('atmos.lang.prim',
-        'lua/atmos/lang/prim.lua'),
+        'atmos-lang/atmos', LANG_TAG,
+        'src/prim.lua'),
     ('atmos.lang.coder',
-        'lua/atmos/lang/coder.lua'),
+        'atmos-lang/atmos', LANG_TAG,
+        'src/coder.lua'),
     ('atmos.lang.tosource',
-        'lua/atmos/lang/tosource.lua'),
+        'atmos-lang/atmos', LANG_TAG,
+        'src/tosource.lua'),
     ('atmos.lang.exec',
-        'lua/atmos/lang/exec.lua'),
+        'atmos-lang/atmos', LANG_TAG,
+        'src/exec.lua'),
     ('atmos.lang.run',
-        'lua/atmos/lang/run.lua'),
+        'atmos-lang/atmos', LANG_TAG,
+        'src/run.lua'),
 ]
 
 OUT = 'web/try/atmos/index-self.html'
@@ -60,8 +93,8 @@ os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 # fetch all modules from GitHub
 tags = ''
-for name, path in MODULES:
-    url = BASE + path
+for name, repo, tag, path in MODULES:
+    url = f'{RAW}/{repo}/{tag}/{path}'
     print(f'  {name}: {url}')
     content = urllib.request.urlopen(url).read()
     content = content.decode('utf-8')
