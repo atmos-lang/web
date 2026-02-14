@@ -74,7 +74,7 @@ MODULES = [
         'src/run.lua'),
 ]
 
-OUT = 'web/try/atmos/index-self.html'
+OUT = 'web/try/atmos/index-github.html'
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
