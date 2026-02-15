@@ -34,7 +34,7 @@
 </head>
 <body>
     <h3>Atmos in the Browser</h3>
-    <textarea id="code">val env = require "atmos.env.clock"
+    <textarea id="code">val env = require "atmos.env.js"
 
 print(env.now)
 watching @5 {
@@ -670,7 +670,9 @@ local run = require "atmos.run"
 
 local atmos = {
     close  = run.close,
-    call   = run.call,
+    stop   = run.stop,
+    loop   = run.loop,
+    start  = run.start,
     status = run.status,
     env    = run.env,
 }
@@ -678,7 +680,9 @@ local atmos = {
 _is_  = run.is
 throw = run.throw
 catch = run.catch
-call  = run.call
+loop  = run.loop
+start = run.start
+stop  = run.stop
 
 defer = run.defer
 tasks = run.tasks
@@ -916,19 +920,43 @@ end
 ---------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
 
-local _env_ = {
-    step  = nil,
-    loop  = nil,
-    stop  = nil,
-    close = nil,
-}
+local _envs_ = {}
 
 function run.env (e)
-    _env_ = e
+    if e.mode == nil then
+        -- no mode: single-env only, cannot combine with others
+        assertn(2, #_envs_ == 0,
+            "invalid env : single-env only (mode not set)")
+        _envs_[1] = e
+        return
+    end
+    assertn(2, #_envs_ == 0 or _envs_[1].mode,
+        "invalid env : previous env is single-env only (mode not set)")
+    _envs_[#_envs_+1] = e
+    if #_envs_ == 2 then
+        local first = _envs_[1]
+        assertn(2, first.mode.primary,
+            "invalid env : primary mode not supported")
+        first.mode.current = 'primary'
+    end
+    if #_envs_ >= 2 then
+        assertn(2, e.mode.secondary,
+            "invalid env : secondary mode not supported")
+        e.mode.current = 'secondary'
+    end
 end
 
 function run.close ()
     meta_tasks.__close(TASKS)
+end
+
+function run.stop ()
+    run.close()
+    for i=#_envs_, 1, -1 do
+        if _envs_[i].close then
+            _envs_[i].close()
+        end
+    end
 end
 
 function run.defer (f)
@@ -1069,7 +1097,7 @@ local function xcall (dbg, stk, f, ...)
                 })
             end
         end
-        if stk == "call" then
+        if stk == "loop" then
             err = flatten(err)
         end
         error(err, 0)
@@ -1077,38 +1105,41 @@ local function xcall (dbg, stk, f, ...)
     end)(pcall(f, ...))
 end
 
-function run.call (body, ...)
-    assertn(2, type(body) == 'function', "invalid call : expected body function")
-    local body = function (...)
-        return (function (...)
-            if _env_.stop then
-                _env_.stop()
-            end
-            return ...
-        end)(body(...))
-    end
-    return xcall(debug_getinfo(2), "call", function (...)
+function run.loop (body, ...)
+    assertn(2, type(body) == 'function', "invalid loop : expected body function")
+    return xcall(debug_getinfo(2), "loop", function (...)
         local _ <close> = run.defer(function ()
-            if _env_.close then
-                _env_.close()
-            end
-            run.close()
+            run.stop()
         end)
+        for _, env in ipairs(_envs_) do
+            if env.open then env.open() end
+        end
         local t <close> = run.spawn(debug_getinfo(4), nil, false, body, ...)
-        if _env_.loop then
-            _env_.loop()
-        else
-            while true do
-                if coroutine.status(t._.th) == 'dead' then
+        while true do
+            if coroutine.status(t._.th) == 'dead' then
+                break
+            end
+            local quit = false
+            for _, env in ipairs(_envs_) do
+                if env.step() then
+                    quit = true
                     break
                 end
-                if _env_.step() then
-                    break
-                end
+            end
+            if quit then
+                break
             end
         end
         return t.ret
     end, ...)
+end
+
+function run.start (body, ...)
+    assertn(2, type(body) == 'function', "invalid start : expected body function")
+    assertn(2, #_envs_ == 1, "invalid start : expected single env")
+    assertn(2, _envs_[1].mode == nil, "invalid start : expected env with mode=nil")
+    if _envs_[1].open then _envs_[1].open() end
+    run.spawn(debug_getinfo(2), nil, false, body, ...)
 end
 
 -------------------------------------------------------------------------------
@@ -1961,7 +1992,6 @@ function M.step ()
 end
 
 M.env = {
-    init = M.init,
     step = M.step,
 }
 
@@ -4202,6 +4232,32 @@ function iter (t, ...)
 end
 </script>
 
+<script type="text/lua" data-module="atmos.env.js">
+local atmos = require "atmos"
+
+local M = {
+    now = 0,
+}
+
+function M.close ()
+    if _js_close_ then
+        _js_close_()
+    end
+end
+
+M.env = {
+    close = M.close,
+    -- mode = nil: single-env only, start() pattern
+}
+
+atmos.env(M.env)
+
+-- expose for JS clock driver to update M.now
+_atm_js_env_ = M
+
+return M
+</script>
+
 
     <script type="module">
     import { LuaFactory } from
@@ -4220,15 +4276,41 @@ end
     const output = document.getElementById('output');
     const status = document.getElementById('status');
 
+    let clockInterval = null;
+    let lua = null;
+    let emitting = false;
+
+    function cleanup () {
+        if (clockInterval) {
+            clearInterval(clockInterval);
+            clockInterval = null;
+        }
+        if (lua) {
+            lua.global.close();
+            lua = null;
+        }
+        btn.textContent = 'Run';
+        btn.disabled = false;
+    }
+
     btn.addEventListener('click', async () => {
+        if (clockInterval) {
+            // stop running program
+            try {
+                await lua.doString('stop()');
+            } catch (_) {}
+            cleanup();
+            status.textContent = 'Stopped.';
+            return;
+        }
+
         output.textContent = '';
         status.textContent = 'Loading...';
         btn.disabled = true;
 
         try {
             const factory = new LuaFactory();
-            const lua =
-                await factory.createEngine();
+            lua = await factory.createEngine();
 
             lua.global.set('print', (...args) => {
                 output.textContent +=
@@ -4237,6 +4319,14 @@ end
 
             lua.global.set('now_ms', () => {
                 return Date.now();
+            });
+
+            // env.close() callback
+            lua.global.set('_js_close_', () => {
+                if (clockInterval) {
+                    clearInterval(clockInterval);
+                    clockInterval = null;
+                }
             });
 
             for (const [name, src] of
@@ -4272,25 +4362,83 @@ end
             );
 
             status.textContent = 'Running...';
+            btn.textContent = 'Stop';
+            btn.disabled = false;
+
+            // require env.js before start()
+            // (env must be registered first)
             await lua.doString(
-                'local f, err = '
+                'require "atmos.env.js"\n'
+                + 'local f, err = '
                 + 'atm_loadstring('
                 + '_atm_src_, _atm_file_)\n'
                 + 'if not f then'
                 + ' error(err) end\n'
-                + 'atmos.call(f)'
+                + 'start(function (...)\n'
+                + '  f(...)\n'
+                + '  _atm_done_ = true\n'
+                + 'end)'
             );
 
-            lua.global.close();
-            status.textContent = 'Done.';
+            // check if body finished immediately
+            // (no awaits in user code)
+            if (lua.global.get('_atm_done_')) {
+                await lua.doString('stop()');
+                cleanup();
+                status.textContent = 'Done.';
+                return;
+            }
+
+            // drive clock events from JS
+            let last = Date.now();
+            clockInterval = setInterval(
+                async () => {
+                if (emitting) return;
+                emitting = true;
+                try {
+                    if (lua.global.get(
+                        '_atm_done_'))
+                    {
+                        clearInterval(
+                            clockInterval);
+                        clockInterval = null;
+                        await lua.doString(
+                            'stop()');
+                        cleanup();
+                        status.textContent =
+                            'Done.';
+                        return;
+                    }
+                    const now = Date.now();
+                    const dt = now - last;
+                    if (dt > 0) {
+                        await lua.doString(
+                            '_atm_js_env_.now='
+                            + now + ';'
+                            + 'emit("clock",'
+                            + dt + ',' + now
+                            + ')');
+                        last = now;
+                    }
+                } catch (e) {
+                    clearInterval(clockInterval);
+                    clockInterval = null;
+                    output.textContent +=
+                        'ERROR: ' + e.message
+                        + '\n';
+                    status.textContent = 'Error.';
+                    cleanup();
+                } finally {
+                    emitting = false;
+                }
+            }, 16);
 
         } catch (e) {
             output.textContent +=
                 'ERROR: ' + e.message + '\n';
             status.textContent = 'Error.';
+            cleanup();
         }
-
-        btn.disabled = false;
     });
     </script>
 </body>

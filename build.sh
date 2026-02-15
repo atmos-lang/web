@@ -19,7 +19,7 @@ RAW='https://raw.githubusercontent.com'
 # repo -> tag
 declare -A TAGS=(
     [lua-atmos/f-streams]=v0.2
-    [lua-atmos/atmos]=v0.5
+    [lua-atmos/atmos]=main
     [atmos-lang/atmos]=v0.5
 )
 
@@ -60,6 +60,14 @@ $content
 "
 done
 
+# --- inline local atmos.env.js module ---
+js_env=$(cat web/try/atmos/env_js.lua)
+lua_tags+="<script type=\"text/lua\" data-module=\"atmos.env.js\">
+$js_env
+</script>
+
+"
+
 # --- write output ---
 cat > "$OUT" <<'HEADER'
 <!DOCTYPE html>
@@ -98,7 +106,7 @@ cat > "$OUT" <<'HEADER'
 </head>
 <body>
     <h3>Atmos in the Browser</h3>
-    <textarea id="code">val env = require "atmos.env.clock"
+    <textarea id="code">val env = require "atmos.env.js"
 
 print(env.now)
 watching @5 {
@@ -136,15 +144,41 @@ cat >> "$OUT" <<'FOOTER'
     const output = document.getElementById('output');
     const status = document.getElementById('status');
 
+    let clockInterval = null;
+    let lua = null;
+    let emitting = false;
+
+    function cleanup () {
+        if (clockInterval) {
+            clearInterval(clockInterval);
+            clockInterval = null;
+        }
+        if (lua) {
+            lua.global.close();
+            lua = null;
+        }
+        btn.textContent = 'Run';
+        btn.disabled = false;
+    }
+
     btn.addEventListener('click', async () => {
+        if (clockInterval) {
+            // stop running program
+            try {
+                await lua.doString('stop()');
+            } catch (_) {}
+            cleanup();
+            status.textContent = 'Stopped.';
+            return;
+        }
+
         output.textContent = '';
         status.textContent = 'Loading...';
         btn.disabled = true;
 
         try {
             const factory = new LuaFactory();
-            const lua =
-                await factory.createEngine();
+            lua = await factory.createEngine();
 
             lua.global.set('print', (...args) => {
                 output.textContent +=
@@ -153,6 +187,14 @@ cat >> "$OUT" <<'FOOTER'
 
             lua.global.set('now_ms', () => {
                 return Date.now();
+            });
+
+            // env.close() callback
+            lua.global.set('_js_close_', () => {
+                if (clockInterval) {
+                    clearInterval(clockInterval);
+                    clockInterval = null;
+                }
             });
 
             for (const [name, src] of
@@ -188,25 +230,83 @@ cat >> "$OUT" <<'FOOTER'
             );
 
             status.textContent = 'Running...';
+            btn.textContent = 'Stop';
+            btn.disabled = false;
+
+            // require env.js before start()
+            // (env must be registered first)
             await lua.doString(
-                'local f, err = '
+                'require "atmos.env.js"\n'
+                + 'local f, err = '
                 + 'atm_loadstring('
                 + '_atm_src_, _atm_file_)\n'
                 + 'if not f then'
                 + ' error(err) end\n'
-                + 'atmos.call(f)'
+                + 'start(function (...)\n'
+                + '  f(...)\n'
+                + '  _atm_done_ = true\n'
+                + 'end)'
             );
 
-            lua.global.close();
-            status.textContent = 'Done.';
+            // check if body finished immediately
+            // (no awaits in user code)
+            if (lua.global.get('_atm_done_')) {
+                await lua.doString('stop()');
+                cleanup();
+                status.textContent = 'Done.';
+                return;
+            }
+
+            // drive clock events from JS
+            let last = Date.now();
+            clockInterval = setInterval(
+                async () => {
+                if (emitting) return;
+                emitting = true;
+                try {
+                    if (lua.global.get(
+                        '_atm_done_'))
+                    {
+                        clearInterval(
+                            clockInterval);
+                        clockInterval = null;
+                        await lua.doString(
+                            'stop()');
+                        cleanup();
+                        status.textContent =
+                            'Done.';
+                        return;
+                    }
+                    const now = Date.now();
+                    const dt = now - last;
+                    if (dt > 0) {
+                        await lua.doString(
+                            '_atm_js_env_.now='
+                            + now + ';'
+                            + 'emit("clock",'
+                            + dt + ',' + now
+                            + ')');
+                        last = now;
+                    }
+                } catch (e) {
+                    clearInterval(clockInterval);
+                    clockInterval = null;
+                    output.textContent +=
+                        'ERROR: ' + e.message
+                        + '\n';
+                    status.textContent = 'Error.';
+                    cleanup();
+                } finally {
+                    emitting = false;
+                }
+            }, 16);
 
         } catch (e) {
             output.textContent +=
                 'ERROR: ' + e.message + '\n';
             status.textContent = 'Error.';
+            cleanup();
         }
-
-        btn.disabled = false;
     });
     </script>
 </body>
