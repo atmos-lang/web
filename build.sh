@@ -1,10 +1,13 @@
 #!/bin/bash
 #
-# Generates web/try/atmos/index.html with all Lua
-# modules fetched from GitHub tags and inlined as
+# Generates:
+#   web/try/atmos/index.html     - Atmos language IDE
+#   web/try/lua-atmos/index.html - Lua with atmos API
+#
+# Modules fetched from GitHub tags and inlined as
 # <script type="text/lua"> tags.
 #
-# Fetches from three upstream repos:
+# Upstream repos:
 #   lua-atmos/f-streams  - streams library
 #   lua-atmos/atmos      - atmos runtime
 #   atmos-lang/atmos     - atmos compiler
@@ -23,8 +26,8 @@ declare -A TAGS=(
     [atmos-lang/atmos]=v0.5
 )
 
-# module-name  repo  path
-MODULES=(
+# lua-atmos modules (runtime)
+LUA_ATMOS_MODULES=(
     'streams         lua-atmos/f-streams  streams/init.lua'
     'atmos           lua-atmos/atmos      atmos/init.lua'
     'atmos.util      lua-atmos/atmos      atmos/util.lua'
@@ -32,6 +35,10 @@ MODULES=(
     'atmos.streams   lua-atmos/atmos      atmos/streams.lua'
     'atmos.x         lua-atmos/atmos      atmos/x.lua'
     'atmos.env.clock lua-atmos/atmos      atmos/env/clock/init.lua'
+)
+
+# atmos-lang modules (compiler)
+ATMOS_LANG_MODULES=(
     'atmos.lang.global  atmos-lang/atmos  src/global.lua'
     'atmos.lang.aux     atmos-lang/atmos  src/aux.lua'
     'atmos.lang.lexer   atmos-lang/atmos  src/lexer.lua'
@@ -43,24 +50,168 @@ MODULES=(
     'atmos.lang.run     atmos-lang/atmos  src/run.lua'
 )
 
-OUT='web/try/atmos/index.html'
-
-# --- fetch all modules from GitHub ---
-lua_tags=''
-for entry in "${MODULES[@]}"; do
-    read -r name repo path <<< "$entry"
-    tag="${TAGS[$repo]}"
-    url="$RAW/$repo/$tag/$path"
-    echo "  $name: $url"
-    content=$(curl -sfL "$url")
-    lua_tags+="<script type=\"text/lua\" data-module=\"$name\">
+# --- fetch modules from GitHub into _tags ---
+_tags=''
+fetch_modules() {
+    _tags=''
+    for entry in "$@"; do
+        read -r name repo path <<< "$entry"
+        tag="${TAGS[$repo]}"
+        url="$RAW/$repo/$tag/$path"
+        echo "  $name: $url"
+        content=$(curl -sfL "$url")
+        _tags+="<script type=\"text/lua\" data-module=\"$name\">
 $content
 </script>
 
 "
-done
+    done
+}
 
-# --- write output ---
+echo "Fetching lua-atmos modules..."
+fetch_modules "${LUA_ATMOS_MODULES[@]}"
+lua_atmos_tags="$_tags"
+
+echo "Fetching atmos-lang modules..."
+fetch_modules "${ATMOS_LANG_MODULES[@]}"
+atmos_lang_tags="$_tags"
+
+# ============================================
+# web/try/lua-atmos/index.html
+# ============================================
+
+OUT='web/try/lua-atmos/index.html'
+mkdir -p "$(dirname "$OUT")"
+
+cat > "$OUT" <<'HEADER'
+<!DOCTYPE html>
+<html>
+<head>
+    <title>lua-atmos - Browser</title>
+    <style>
+        body {
+            font-family: monospace;
+            margin: 20px;
+        }
+        #code {
+            width: 80ch;
+            height: 16em;
+            font-family: monospace;
+            font-size: 14px;
+            tab-size: 4;
+        }
+        #output {
+            width: 80ch;
+            border: 1px solid #ccc;
+            padding: 8px;
+            min-height: 4em;
+            background: #f8f8f8;
+        }
+        button {
+            font-size: 14px;
+            padding: 4px 16px;
+            margin: 4px 4px 4px 0;
+        }
+        #status {
+            color: #888;
+            margin-left: 8px;
+        }
+    </style>
+</head>
+<body>
+    <h3>lua-atmos in the Browser</h3>
+    <textarea id="code">local atmos = require "atmos"
+local X = require "atmos.x"
+local streams = require "streams"
+
+print("lua-atmos loaded!")
+</textarea>
+    <br>
+    <button id="run">Run</button>
+    <span id="status"></span>
+    <pre id="output"></pre>
+
+HEADER
+
+echo "$lua_atmos_tags" >> "$OUT"
+
+cat >> "$OUT" <<'FOOTER'
+    <script type="module">
+    import { LuaFactory } from
+        'https://cdn.jsdelivr.net/npm/wasmoon@1.16.0/+esm';
+
+    const LUA_MODULES = {};
+    document.querySelectorAll(
+        'script[type="text/lua"]'
+    ).forEach(el => {
+        LUA_MODULES[el.dataset.module] =
+            el.textContent;
+    });
+
+    const btn = document.getElementById('run');
+    const codeEl = document.getElementById('code');
+    const output = document.getElementById('output');
+    const status = document.getElementById('status');
+
+    btn.addEventListener('click', async () => {
+        output.textContent = '';
+        status.textContent = 'Loading...';
+        btn.disabled = true;
+
+        try {
+            const factory = new LuaFactory();
+            const lua =
+                await factory.createEngine();
+
+            lua.global.set('print', (...args) => {
+                output.textContent +=
+                    args.join('\t') + '\n';
+            });
+
+            lua.global.set('now_ms', () => {
+                return Date.now();
+            });
+
+            for (const [name, src] of
+                Object.entries(LUA_MODULES))
+            {
+                lua.global.set('_mod_name_', name);
+                lua.global.set('_mod_src_', src);
+                await lua.doString(
+                    'package.preload[_mod_name_]'
+                    + ' = assert(load(_mod_src_,'
+                    + ' "@" .. _mod_name_))'
+                );
+            }
+
+            status.textContent = 'Running...';
+            await lua.doString(codeEl.value);
+
+            lua.global.close();
+            status.textContent = 'Done.';
+
+        } catch (e) {
+            output.textContent +=
+                'ERROR: ' + e.message + '\n';
+            status.textContent = 'Error.';
+        }
+
+        btn.disabled = false;
+    });
+    </script>
+</body>
+</html>
+FOOTER
+
+sz=$(wc -c < "$OUT")
+echo "Generated $OUT ($sz bytes)"
+
+# ============================================
+# web/try/atmos/index.html
+# ============================================
+
+OUT='web/try/atmos/index.html'
+
 cat > "$OUT" <<'HEADER'
 <!DOCTYPE html>
 <html>
@@ -115,8 +266,9 @@ print(env.now)
 
 HEADER
 
-# append lua module tags
-echo "$lua_tags" >> "$OUT"
+# append ALL module tags (lua-atmos + atmos-lang)
+echo "$lua_atmos_tags" >> "$OUT"
+echo "$atmos_lang_tags" >> "$OUT"
 
 cat >> "$OUT" <<'FOOTER'
     <script type="module">
