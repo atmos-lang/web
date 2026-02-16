@@ -148,10 +148,40 @@ cat >> "$OUT" <<'FOOTER'
             el.textContent;
     });
 
+    const factory = new LuaFactory();
+
     const btn = document.getElementById('run');
     const codeEl = document.getElementById('code');
     const output = document.getElementById('output');
     const status = document.getElementById('status');
+
+    async function newEngine() {
+        const lua =
+            await factory.createEngine();
+
+        lua.global.set('print', (...args) => {
+            output.textContent +=
+                args.join('\t') + '\n';
+        });
+
+        lua.global.set('now_ms', () => {
+            return Date.now();
+        });
+
+        for (const [name, src] of
+            Object.entries(LUA_MODULES))
+        {
+            lua.global.set('_mod_name_', name);
+            lua.global.set('_mod_src_', src);
+            await lua.doString(
+                'package.preload[_mod_name_]'
+                + ' = assert(load(_mod_src_,'
+                + ' "@" .. _mod_name_))'
+            );
+        }
+
+        return lua;
+    }
 
     btn.addEventListener('click', async () => {
         output.textContent = '';
@@ -159,30 +189,7 @@ cat >> "$OUT" <<'FOOTER'
         btn.disabled = true;
 
         try {
-            const factory = new LuaFactory();
-            const lua =
-                await factory.createEngine();
-
-            lua.global.set('print', (...args) => {
-                output.textContent +=
-                    args.join('\t') + '\n';
-            });
-
-            lua.global.set('now_ms', () => {
-                return Date.now();
-            });
-
-            for (const [name, src] of
-                Object.entries(LUA_MODULES))
-            {
-                lua.global.set('_mod_name_', name);
-                lua.global.set('_mod_src_', src);
-                await lua.doString(
-                    'package.preload[_mod_name_]'
-                    + ' = assert(load(_mod_src_,'
-                    + ' "@" .. _mod_name_))'
-                );
-            }
+            const lua = await newEngine();
 
             status.textContent = 'Running...';
             await lua.doString(codeEl.value);
