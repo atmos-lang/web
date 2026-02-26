@@ -14,6 +14,7 @@ documents everything.
 - [x] Step 3 — Remove unversioned `index.html` files
 - [x] Step 4 — Update CI/CD workflow (`deploy.yml`)
 - [x] Step 5 — Write `README.md`
+- [x] Step 6 — Download runner HTML as local `run-*.html`, use `iframe.src`
 
 ## Files
 

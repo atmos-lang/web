@@ -6,9 +6,13 @@
         body { font-family: monospace; margin: 20px; }
         #code {
             width: 80ch; height: 16em;
-            font-family: monospace; font-size: 14px; tab-size: 4;
+            font-family: monospace; font-size: 14px;
+            tab-size: 4;
         }
-        button { font-size: 14px; padding: 4px 16px; margin: 4px 4px 4px 0; }
+        button {
+            font-size: 14px; padding: 4px 16px;
+            margin: 4px 4px 4px 0;
+        }
         #runner {
             display: block; width: 80ch; height: 20em;
             border: 1px solid #ccc; background: #f8f8f8;
@@ -23,7 +27,7 @@
     end)
 end)</textarea>
     <br>
-    <button onclick="runner.src='https://cdn.jsdelivr.net/gh/lua-atmos/env-js/lua-atmos-main.html#'+btoa(code.value)">Run</button>
+    <button onclick="runner.src='run-main.html#'+btoa(code.value)">Run</button>
     <iframe id="runner"></iframe>
 </body>
 </html>
