@@ -17,14 +17,9 @@
 </head>
 <body>
     <h3>Lua in the Browser</h3>
-    <textarea id="code">print("Hello from Lua 5.4!")
-
-for i = 1, 5 do
-    print("  i = " .. i)
-end
-</textarea>
+    <textarea id="code">print("hello")</textarea>
     <br>
-    <button onclick="runner.src='https://cdn.jsdelivr.net/gh/lua-atmos/atmos@v0.5/lua.html#'+btoa(code.value)">Run</button>
+    <button onclick="runner.src='https://cdn.jsdelivr.net/gh/lua-atmos/env-js/lua-main.html#'+btoa(code.value)">Run</button>
     <iframe id="runner"></iframe>
 </body>
 </html>

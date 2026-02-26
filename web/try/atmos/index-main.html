@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>lua-atmos - Browser</title>
+    <title>Atmos - Browser</title>
     <style>
         body { font-family: monospace; margin: 20px; }
         #code {
@@ -16,14 +16,14 @@
     </style>
 </head>
 <body>
-    <h3>lua-atmos in the Browser</h3>
-    <textarea id="code">local atmos = require "atmos"
-local X = require "atmos.x"
-
-print("lua-atmos loaded!")
-</textarea>
+    <h3>Atmos in the Browser</h3>
+    <textarea id="code">watching @5 {
+    every @1 {
+        print "hello"
+    }
+}</textarea>
     <br>
-    <button onclick="runner.src='https://cdn.jsdelivr.net/gh/lua-atmos/atmos@v0.5/lua-atmos.html#'+btoa(code.value)">Run</button>
+    <button onclick="runner.src='https://cdn.jsdelivr.net/gh/lua-atmos/env-js/atmos-main.html#'+btoa(code.value)">Run</button>
     <iframe id="runner"></iframe>
 </body>
 </html>

@@ -1,0 +1,5 @@
+watching @5 {
+    every @1 {
+        print "hello"
+    }
+}
