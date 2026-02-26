@@ -11,7 +11,22 @@ env:
   APP_DIR: atmos  # subpasta deste projeto no DreamHost
 
 jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rebuild and verify
+        run: |
+          bash build.sh main
+          git diff --exit-code web/try/lua/index-main.html
+          git diff --exit-code web/try/lua/run-main.html
+          git diff --exit-code web/try/lua-atmos/index-main.html
+          git diff --exit-code web/try/lua-atmos/run-main.html
+          git diff --exit-code web/try/atmos/index-main.html
+          git diff --exit-code web/try/atmos/run-main.html
+
   deploy-dev:
+    needs: verify
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
@@ -38,6 +53,7 @@ jobs:
           rm -f ~/.ssh/deploy_key
 
   deploy-pro:
+    needs: verify
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     steps:
