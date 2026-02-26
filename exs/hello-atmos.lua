@@ -1,0 +1,5 @@
+watching(clock{s=5}, function ()
+    every(clock{s=1}, function ()
+        print("hello")
+    end)
+end)
