@@ -40,15 +40,11 @@ Deploy jobs depend on `verify`:
 
 ### Dev
 
-- https://www.dev.ceu-lang.org/atmos/try/atmos/
-- https://www.dev.ceu-lang.org/atmos/try/lua/
-- https://www.dev.ceu-lang.org/atmos/try/lua-atmos/
+- https://www.dev.ceu-lang.org/atmos/try/
 
 ### Pro
 
-- https://www.ceu-lang.org/atmos/try/atmos/
-- https://www.ceu-lang.org/atmos/try/lua/
-- https://www.ceu-lang.org/atmos/try/lua-atmos/
+- https://www.ceu-lang.org/atmos/try/
 
 ### Deployment
 
@@ -78,6 +74,7 @@ Deployment uses rsync over SSH. Required secrets and variables:
         hello.atm
     web/
         try/
+            index.html
             lua/
                 index-main.html
             lua-atmos/
