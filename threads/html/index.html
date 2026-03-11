@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>comp.lang.compilers</title>
+<style>
+body { font-family: monospace; max-width: 800px; margin: 2em auto; background: #fefefe; color: #222; }
+h1 { font-size: 1.2em; border-bottom: 1px solid #999; padding-bottom: .3em; }
+details { margin-left: 1.5em; margin-top: .5em; }
+summary { cursor: pointer; font-weight: bold; font-size: .95em; }
+summary:hover { color: #336; }
+.from { color: #555; font-weight: normal; }
+.date { color: #888; font-weight: normal; font-size: .85em; }
+.body { margin: .4em 0 .8em 1em; white-space: pre-wrap; font-size: .9em; line-height: 1.4; }
+.leaf { margin-left: 1.5em; margin-top: .5em; }
+.leaf .subj { font-weight: bold; font-size: .95em; }
+</style>
+</head>
+<body>
+<h1>comp.lang.compilers</h1>
+
+<details open>
+  <summary>
+    Re: Is C still relevant for compiler construction?
+    <span class="from">— John McCarthy &lt;jmc@stanford.edu&gt;</span>
+    <span class="date">1995-03-12</span>
+  </summary>
+  <div class="body">C remains the lingua franca for systems programming. Most production
+compilers are still written in C or C++. The real question is whether
+that *should* continue to be the case.</div>
+
+  <details open>
+    <summary>
+      Re: Is C still relevant for compiler construction?
+      <span class="from">— Alice Lang &lt;alang@mit.edu&gt;</span>
+      <span class="date">1995-03-13</span>
+    </summary>
+    <div class="body">I'd argue ML-family languages are far better suited for writing
+compilers. Pattern matching on AST nodes alone makes it worthwhile.
+SML/NJ is itself a compelling example.</div>
+
+    <details open>
+      <summary>
+        Re: Is C still relevant for compiler construction?
+        <span class="from">— Bob Parse &lt;bparse@bell-labs.com&gt;</span>
+        <span class="date">1995-03-14</span>
+      </summary>
+      <div class="body">Pattern matching is nice, but try getting ML to emit fast native code
+on 15 different architectures. GCC's C codebase is ugly but it *works*
+everywhere.</div>
+
+      <div class="leaf">
+        <div class="subj">
+          Re: Is C still relevant for compiler construction?
+          <span class="from">— Alice Lang &lt;alang@mit.edu&gt;</span>
+          <span class="date">1995-03-15</span>
+        </div>
+        <div class="body">Fair point on portability. But that's an argument for better ML
+backends, not for writing new compilers in C.</div>
+      </div>
+    </details>
+  </details>
+
+  <details>
+    <summary>
+      Re: Is C still relevant for compiler construction?
+      <span class="from">— Carol Lex &lt;clex@cmu.edu&gt;</span>
+      <span class="date">1995-03-13</span>
+    </summary>
+    <div class="body">Don't overlook Lisp. The Lisp community has been writing compilers
+in Lisp since the 1960s. Macros give you AST manipulation for free.</div>
+
+    <div class="leaf">
+      <div class="subj">
+        Re: Is C still relevant for compiler construction?
+        <span class="from">— John McCarthy &lt;jmc@stanford.edu&gt;</span>
+        <span class="date">1995-03-14</span>
+      </div>
+      <div class="body">I'm inclined to agree, naturally. :-)
+
+Though I will say the parentheses put people off unnecessarily.</div>
+    </div>
+  </details>
+</details>
+
+<details>
+  <summary>
+    CFG: Call for papers — Workshop on Partial Evaluation
+    <span class="from">— David Eval &lt;deval@diku.dk&gt;</span>
+    <span class="date">1995-03-10</span>
+  </summary>
+  <div class="body">The 3rd Workshop on Partial Evaluation and Program Manipulation
+will be held in Copenhagen, June 1995. Papers on partial evaluation,
+specialization, and staging are welcome. Deadline: April 15.</div>
+</details>
+
+</body>
+</html>
