@@ -18,12 +18,12 @@ jobs:
       - name: Rebuild and verify
         run: |
           bash build.sh main
-          git diff --exit-code web/try/lua/index-main.html
-          git diff --exit-code web/try/lua/run-main.html
-          git diff --exit-code web/try/lua-atmos/index-main.html
-          git diff --exit-code web/try/lua-atmos/run-main.html
-          git diff --exit-code web/try/atmos/index-main.html
-          git diff --exit-code web/try/atmos/run-main.html
+          git diff --exit-code web/try/main/lua/index.html
+          git diff --exit-code web/try/main/lua/run.html
+          git diff --exit-code web/try/main/lua-atmos/index.html
+          git diff --exit-code web/try/main/lua-atmos/run.html
+          git diff --exit-code web/try/main/atmos/index.html
+          git diff --exit-code web/try/main/atmos/run.html
 
   deploy-dev:
     needs: verify

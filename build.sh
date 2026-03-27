@@ -5,18 +5,18 @@ VER="${1:?Usage: bash build.sh <version>}"
 
 gen() {
     local tier="$1" title="$2" sample_file="$3"
-    local dir="web/try/${tier}"
+    local dir="web/try/${VER}/${tier}"
     local sample
     sample="$(cat "$sample_file")"
 
     mkdir -p "$dir"
 
     local url="https://raw.githubusercontent.com"
-    url+="/lua-atmos/env-js/main/${tier}-${VER}.html"
-    curl -sfL "$url" > "${dir}/run-${VER}.html"
-    echo "  ${dir}/run-${VER}.html"
+    url+="/lua-atmos/env-js/main/out/${VER}/${tier}.html"
+    curl -sfL "$url" > "${dir}/run.html"
+    echo "  ${dir}/run.html"
 
-    cat > "${dir}/index-${VER}.html" <<EOF
+    cat > "${dir}/index.html" <<EOF
 <!DOCTYPE html>
 <html>
 <head>
@@ -42,12 +42,12 @@ gen() {
     <h3>${title} in the Browser</h3>
     <textarea id="code">${sample}</textarea>
     <br>
-    <button onclick="runner.src='run-${VER}.html#'+btoa(code.value)">Run</button>
+    <button onclick="runner.src='run.html#'+btoa(code.value)">Run</button>
     <iframe id="runner"></iframe>
 </body>
 </html>
 EOF
-    echo "  ${dir}/index-${VER}.html"
+    echo "  ${dir}/index.html"
 }
 
 echo "Generating index-${VER}.html files..."

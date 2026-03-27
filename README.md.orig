@@ -2,9 +2,42 @@
 
 # web
 
+<<<<<<< HEAD
+## Sites
+
+### Dev
+
+- https://www.dev.ceu-lang.org/atmos/try/atmos/
+- https://www.dev.ceu-lang.org/atmos/try/lua/
+- https://www.dev.ceu-lang.org/atmos/try/lua-atmos/
+
+### Pro
+
+- https://www.ceu-lang.org/atmos/try/atmos/
+- https://www.ceu-lang.org/atmos/try/lua/
+- https://www.ceu-lang.org/atmos/try/lua-atmos/
+
+## Deployment
+
+Deployment is handled by GitHub Actions (rsync over SSH to
+DreamHost):
+
+- **Dev** — push to `main` deploys to dev
+- **Pro** — push a `v*` tag deploys to pro
+
+## SSH Access
+
+SSH credentials are stored in GitHub secrets and variables:
+
+- `DH_SSH_KEY` (secret) — private key
+- `DH_HOST` (variable) — remote host
+- `DH_USER` (variable) — remote user
+- `DH_DIR_DEV` (variable) — dev target directory
+- `DH_DIR_PRO` (variable) — pro target directory
+=======
 Browser IDEs for Lua, lua-atmos, and Atmos. Each page embeds
 a textarea + Run button that loads a runner iframe from
-GitHub raw (`lua-atmos/env-js`).
+jsDelivr CDN.
 
 ## Build
 
@@ -12,9 +45,9 @@ GitHub raw (`lua-atmos/env-js`).
 
 Generates versioned HTML files from templates and sample code:
 
-- `web/try/<version>/lua/index.html`
-- `web/try/<version>/lua-atmos/index.html`
-- `web/try/<version>/atmos/index.html`
+- `web/try/lua/index-<version>.html`
+- `web/try/lua-atmos/index-<version>.html`
+- `web/try/atmos/index-<version>.html`
 
 Sample code lives in `exs/` and is embedded in the textarea.
 
@@ -38,22 +71,6 @@ Deploy jobs depend on `verify`:
 
 ## DreamHost
 
-### Dev
-
-- https://www.dev.ceu-lang.org/atmos/try/
-
-### Pro
-
-- https://www.ceu-lang.org/atmos/try/
-
-### Deployment
-
-Deployment is handled by GitHub Actions (rsync over SSH to
-DreamHost):
-
-- **Dev** — push to `main` deploys to dev
-- **Pro** — push a `v*` tag deploys to pro
-
 Deployment uses rsync over SSH. Required secrets and variables:
 
 | Kind | Name | Description |
@@ -74,14 +91,10 @@ Deployment uses rsync over SSH. Required secrets and variables:
         hello.atm
     web/
         try/
-            index.html
-            main/
-                lua/
-                    index.html
-                    run.html
-                lua-atmos/
-                    index.html
-                    run.html
-                atmos/
-                    index.html
-                    run.html
+            lua/
+                index-main.html
+            lua-atmos/
+                index-main.html
+            atmos/
+                index-main.html
+>>>>>>> 93f02887eeea5c856a59ea114a9461f0961cd441
