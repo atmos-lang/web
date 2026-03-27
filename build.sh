@@ -42,7 +42,7 @@ gen() {
     <h3>${title} in the Browser</h3>
     <textarea id="code">${sample}</textarea>
     <br>
-    <button onclick="runner.src='run.html#'+btoa(code.value)">Run</button>
+    <button onclick="runner.src='run.html?t='+Date.now()+'#'+btoa(code.value)">Run</button>
     <iframe id="runner"></iframe>
 </body>
 </html>
