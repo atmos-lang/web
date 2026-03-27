@@ -22,41 +22,14 @@ jobs:
           bash build.sh v0.6
           git diff --exit-code web/try/v0.6/
 
-  deploy-dev:
-    needs: verify
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Deploy to dev
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.DH_SSH_KEY }}
-          REMOTE_HOST: ${{ vars.DH_HOST }}
-          REMOTE_USER: ${{ vars.DH_USER }}
-          REMOTE_DIR: ${{ vars.DH_DIR_DEV }}
-        run: |
-          mkdir -p ~/.ssh
-          echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H "$REMOTE_HOST" >> ~/.ssh/known_hosts 2>/dev/null
-
-          rsync -avz --delete \
-            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
-            --exclude 'node_modules' \
-            --exclude '.env' \
-            web/ "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/${APP_DIR}/"
-
-          rm -f ~/.ssh/deploy_key
-
-  deploy-pro:
+  deploy:
     needs: verify
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
     steps:
       - uses: actions/checkout@v4
 
-      - name: Deploy to pro
+      - name: Deploy
         env:
           SSH_PRIVATE_KEY: ${{ secrets.DH_SSH_KEY }}
           REMOTE_HOST: ${{ vars.DH_HOST }}

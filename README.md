@@ -31,38 +31,19 @@ The `verify` job runs on every push and PR. It rebuilds all
 versioned files and checks `git diff --exit-code` to ensure
 committed files match the build output.
 
-Deploy jobs depend on `verify`:
-
-- **deploy-dev** — pushes `web/` to DreamHost dev on main
-- **deploy-pro** — pushes `web/` to DreamHost pro on tags
-
-## DreamHost
-
-### Dev
-
-- https://www.dev.ceu-lang.org/atmos/try/
-
-### Pro
+The `deploy` job depends on `verify` and pushes `web/` to
+DreamHost on every push to `main`.
 
 - https://www.ceu-lang.org/atmos/try/
 
-### Deployment
-
-Deployment is handled by GitHub Actions (rsync over SSH to
-DreamHost):
-
-- **Dev** — push to `main` deploys to dev
-- **Pro** — push a `v*` tag deploys to pro
-
 Deployment uses rsync over SSH. Required secrets and variables:
 
-| Kind | Name | Description |
-|------|------|-------------|
-| secret | `DH_SSH_KEY` | SSH private key |
-| var | `DH_HOST` | DreamHost hostname |
-| var | `DH_USER` | SSH username |
-| var | `DH_DIR_DEV` | Remote directory (dev) |
-| var | `DH_DIR_PRO` | Remote directory (pro) |
+| Kind   | Name         | Description        |
+| ------ | ------------ | ------------------ |
+| secret | `DH_SSH_KEY` | SSH private key    |
+| var    | `DH_HOST`    | DreamHost hostname |
+| var    | `DH_USER`    | SSH username       |
+| var    | `DH_DIR_PRO` | Remote directory   |
 
 ## Directory structure
 
